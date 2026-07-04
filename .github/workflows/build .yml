@@ -1,0 +1,45 @@
+name: Build ChanlunX DLL
+
+# 触发条件：推送到仓库时自动构建，也可以手动触发
+on:
+  push:
+    branches: [ master ]
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: windows-latest
+    strategy:
+      matrix:
+        arch: [Win32, x64]
+
+    steps:
+      # 1. 拉取源码
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      # 2. 初始化 MSVC 编译环境
+      - name: Setup MSVC
+        uses: ilammy/msvc-dev-cmd@v1
+        with:
+          arch: ${{ matrix.arch == 'Win32' && 'x86' || 'x64' }}
+
+      # 3. 配置 CMake
+      - name: Configure CMake
+        run: |
+          mkdir build
+          cd build
+          cmake -A ${{ matrix.arch }} ..
+
+      # 4. 编译生成 DLL
+      - name: Build
+        run: |
+          cd build
+          cmake --build . --config Release
+
+      # 5. 上传编译好的 DLL 文件
+      - name: Upload DLL artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ChanlunX-${{ matrix.arch }}-dll
+          path: build/Release/ChanlunX.dll
